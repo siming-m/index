@@ -62,19 +62,17 @@
 </head>
 
 <body>
-    <h1>Multiple object detection using pre trained model in TensorFlow.js</h1>
+    <h1>在TensorFlow.js中使用预训练模型进行多目标检测</h1>
 
-    <p>Wait for the model to load before clicking the button to enable the webcam - at which point it will become
-        visible to use.</p>
+    <p>等待模型加载，然后点击按钮启用网络摄像头-此时它将成为可见的使用。</p>
 
     <section id="demos" class="invisible">
 
-        <p>Hold some objects up close to your webcam to get a real-time classification! When ready click "enable webcam"
-            below and accept access to the webcam when the browser asks (check the top left of your window)</p>
+        <p>拿一些物体靠近你的网络摄像头，以获得实时分类!准备好后，点击“启用网络摄像头”并在浏览器请求时接受对网络摄像头的访问(勾选窗口左上角)</p>
 
         <div id="liveView" class="camView">
             <button id="webcamButton">Enable Webcam</button>
-            <video id="webcam" autoplay muted width="640" height="480"></video>
+            <video id="webcam" autoplay muted width="840" height="680"></video>
         </div>
     </section>
 
@@ -92,6 +90,7 @@
         const enableWebcamButton = document.getElementById('webcamButton');
 
 
+
         // Check if webcam access is supported.
         function getUserMediaSupported() {
             return !!(navigator.mediaDevices &&
@@ -99,7 +98,7 @@
         }
 
         // If webcam supported, add event listener to button for when user
-        // wants to activate it to call enableCam function which we will 
+        // wants to activate it to call enableCam function which we will
         // define in the next step.
         if (getUserMediaSupported()) {
             enableWebcamButton.addEventListener('click', enableCam);
@@ -107,8 +106,6 @@
             console.warn('getUserMedia() is not supported by your browser');
         }
 
-        // Placeholder function for next step. Paste over this in the next step.
-        // Enable the live webcam view and start classification.
         function enableCam(event) {
             // Only continue if the COCO-SSD has finished loading.
             if (!model) {
@@ -118,17 +115,52 @@
             // Hide the button once clicked.
             event.target.classList.add('removed');
 
-            // getUsermedia parameters to force video but not audio.
-            const constraints = {
-                video: true
-            };
+            // 获取所有可用的媒体设备
+            navigator.mediaDevices.enumerateDevices()
+                .then(function (devices) {
+                    // 找到后置摄像头设备
+                    const rearCamera = devices.find(device => device.kind === 'videoinput' && device.facingMode === 'environment');
 
-            // Activate the webcam stream.
-            navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
-                video.srcObject = stream;
-                video.addEventListener('loadeddata', predictWebcam);
-            });
+                    // 使用后置摄像头或默认使用任意摄像头
+                    const constraints = {
+                        video: rearCamera ? { deviceId: rearCamera.deviceId } : true
+                    };
+
+                    // 获取用户媒体设备
+                    return navigator.mediaDevices.getUserMedia(constraints);
+                })
+                .then(function (stream) {
+                    // 处理视频流
+
+                    console.log(stream, 123123)
+                    video.srcObject = stream;
+
+                    console.log(video.srcObject, 'video.srcObject')
+                    video.addEventListener('loadeddata', predictWebcam);
+                })
+                .catch(function (error) {
+                    console.error('Error accessing webcam:', error);
+                });
         }
+
+        video.addEventListener('loadedmetadata', function () {
+            // 视频准备就绪，可以执行你的操作
+            console.log('Video is ready');
+        });
+        // Store the resulting model in the global scope of our app.
+        var model = undefined;
+
+        // Before we can use COCO-SSD class we must wait for it to finish
+        // loading. Machine Learning models can be large and take a moment
+        // to get everything needed to run.
+        // Note: cocoSsd is an external object loaded from our index.html
+        // script tag import so ignore any warning in Glitch.
+        cocoSsd.load().then(function (loadedModel) {
+            model = loadedModel;
+            // Show demo section now model is ready to use.
+            demosSection.classList.remove('invisible');
+        });
+
 
         var children = [];
 
@@ -172,19 +204,8 @@
                 window.requestAnimationFrame(predictWebcam);
             });
         }
-        // Store the resulting model in the global scope of our app.
-        var model = undefined;
 
-        // Before we can use COCO-SSD class we must wait for it to finish
-        // loading. Machine Learning models can be large and take a moment 
-        // to get everything needed to run.
-        // Note: cocoSsd is an external object loaded from our index.html
-        // script tag import so ignore any warning in Glitch.
-        cocoSsd.load().then(function (loadedModel) {
-            model = loadedModel;
-            // Show demo section now model is ready to use.
-            demosSection.classList.remove('invisible');
-        });
+
     </script>
 </body>
 
